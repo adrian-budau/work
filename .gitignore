@@ -1,0 +1,10 @@
+*
+!*.cpp
+!*.py
+!*/
+*.in
+*.out
+*.txt
+*.cpp~
+!.gitignore
+!README.md
