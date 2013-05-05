@@ -1,390 +1,188 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <map>
-#include <set>
+#include <cstdlib>
+#include <ctime>
+#include <tuple>
 
 using namespace std;
 
-class HashMap {
+class FenwickTree {
   public:
-    HashMap(const size_t &bits = 4) {
-        initialize(1 << bits);
+    FenwickTree(const int &size, const int &value = 0):
+            data_(size + 1) {
+        for (int i = 1; i <= size; ++i)
+            data_[i] = (i & - i) * value;
     }
 
-    template<class InputIterator>
-    HashMap(InputIterator first, InputIterator last) {
-        size_t elements = distance(first, last);
-        int size = 1;
-        int maximum_capacity = kLoadFactor * size;
-        while (maximum_capacity < elements) {
-            size *= 2;
-            maximum_capacity = kLoadFactor * size;
-        }
-
-        initialize(size);
-        insert(first, last);
+    void update(int where, int value) {
+        for (;where < int(data_.size()); where += (where & -where))
+            data_[where] += value;
     }
 
-    ~HashMap() {
-        delete[] data_;
-        delete[] mapa_;
+    int query(int where) {
+        int sum = 0;
+        for (; where; where -= (where & -where))
+            sum += data_[where];
+        return sum;
     }
 
-    void clear() {
-        for (size_t i = 0; i < size_; ++i)
-            data_[i] = -1;
-        non_empty_elements_ = 0;
-        filled_elements_ = 0;
-    }
+    int find(int value) {
+        int step, i;
+        for (step = 1; step < int(data_.size()); step <<= 1);
+        for (i = 0; step; step >>= 1)
+            if (i + step < int(data_.size()) && data_[i + step] <= value) {
+                i += step;
+                value -= data_[i];
+            }
 
-    class iterator : public std::iterator<std::input_iterator_tag, int> {
-      public:
-        iterator(int* const data, int* const mapa, int* const data_end):
-          data_(data),
-          mapa_(mapa),
-          data_end_(data_end) {
-        }
-
-        iterator(const iterator& that):
-          data_(that.data_),
-          mapa_(that.mapa_),
-          data_end_(that.data_end_) {
-        }
-
-        bool empty() const {
-            return data_ != data_end_ && *data_ == -1;
-        }
-
-        bool filled() const {
-            return data_ == data_end_ || *data_ >= 0;
-        }
-
-        iterator& operator=(const pair<int, int> &that) {
-            *data_ = that.first;
-            *mapa_ = that.second;
-            return *this;
-        }
-
-        bool operator!=(const iterator& that) const {
-            return data_ != that.data_ || mapa_ != that.mapa_;
-        }
-
-        bool operator!=(const int& that) const {
-            return *data_ != that;
-        }
-
-        bool operator==(const int& that) const {
-            return *data_ == that;
-        }
-
-        bool operator==(const iterator& that) const {
-            return data_ == that.data_ && mapa_ == that.mapa_;
-        }
-
-        const pair<int, int> operator*() const {
-            return make_pair(*data_, *mapa_);
-        }
-
-        iterator& operator++() {
-            do {
-                data_++;
-                mapa_++;
-            } while (!filled());
-
-            return *this;
-        }
-
-      private:
-        friend class HashMap;
-
-        int *data_;
-        int *mapa_;
-        const int *data_end_;
-    };
-
-    iterator find(const int& data) {
-        iterator it = pointTo(data);
-        while (!it.empty() && it != data) {
-            it = pointToNext(it);
-        }
-
-        if (it.empty())
-            return end();
-        return it;
-    }
-
-    int& operator[](const int &data) {
-        iterator it = find(data);
-        if (it == end())
-            it = insert(data, 0);
-        return *(it.mapa_);
-    }
-
-    iterator insert(const int& element, const int &value) {
-        iterator it = find(element);
-        if (it != end())
-            return it;
-        it = pointTo(element);
-        while (it.filled()) {
-            it = pointToNext(it);
-        }
-
-        if (it.empty())
-            ++non_empty_elements_;
-
-        it = make_pair(element, value);
-        ++filled_elements_;
-
-        if (non_empty_elements_ == maximum_capacity_) {
-            grow();
-            return find(element);
-        }
-        return it;
-    }
-
-    template<class InputIterator>
-    void insert(InputIterator first, InputIterator last) {
-        while (first != last) {
-            insert((*first).first, (*first).second);
-            ++first;
-        }
-    }
-
-    bool erase(const int& element) {
-        iterator it = find(element);
-
-        if (it != end()) {
-            erase(it);
-            return true;
-        }
-
-        return false;
-    }
-
-    bool erase(const iterator& iterator) {
-        *(iterator.data_)  = -2;
-
-        filled_elements_--;
-
-        return true;
-    }
-
-    iterator begin() {
-        iterator it(data_, mapa_, data_ + size_);
-        if (!it.filled())
-            ++it;
-        return it;
-    }
-
-    iterator end() {
-        return iterator(data_ + size_, mapa_ + size_, data_ + size_);
-    }
-
-    size_t size() const {
-        return filled_elements_;
+        if (value)
+            return data_.size();
+        return i;
     }
 
   private:
-    static const double kLoadFactor; 
-
-    void initialize(const int &size) {
-        size_ = size;
-        maximum_capacity_ = kLoadFactor * size;
-        non_empty_elements_ = 0;
-        filled_elements_ = 0;
-
-        data_ = new int[size];
-        mapa_ = new int[size];
-        for (int i = 0; i < size; ++i)
-            data_[i] = -1;
-    }
-
-    iterator pointToNext(const iterator &current) {
-        size_t position = (current.data_ - data_ + 1) & (size_ - 1);
-        return iterator(data_ + position, mapa_ + position, data_ + size_);
-    }
-
-    iterator pointTo(const int& data) {
-        size_t position = (data * 41) & (size_ - 1);
-        return iterator(data_ + position, mapa_ + position, data_ + size_);
-    }
-
-    void grow() {
-        int *old_data = data_;
-        int* old_mapa = mapa_;
-        iterator old_begin = begin(), old_end = end();
-
-        initialize(size_ * 2);
-
-        insert(old_begin, old_end);
-
-        delete[] old_data;
-        delete[] old_mapa;
-    }
-
-    size_t size_;
-    size_t maximum_capacity_;
-    size_t non_empty_elements_;
-    size_t filled_elements_;
-
-    int *data_;
-    int *mapa_;
+    vector<int> data_;
 };
 
-const double HashMap::kLoadFactor = 0.7;
+class Node {
+  public:
+    Node(int, int);
 
-long long answer = 0;
+    int value, priority, count;
+    Node *left, *right, *root;
+} *NIL;
 
-const int kMaxN = (1 << 20) + 10;
-
-HashMap from[kMaxN];
-HashMap many[kMaxN];
-int zero[kMaxN];
-
-void build(int nod, int left, int right) {
-    many[nod][0] = right - left + 1;
-    //cerr << " -------> " << many[nod].size() << " " << many[nod][0] << "\n";
-    if (left == right)
-        return;
-    int mid = (left + right) / 2;
-    build(nod * 2, left, mid);
-    build(nod * 2 + 1, mid + 1, right);
+Node::Node(int _value, int _priority):
+        value(_value),
+        priority(_priority),
+        count(1),
+        left(NIL),
+        right(NIL),
+        root(NIL) {
 }
 
-int get(HashMap &many, int c) {
-    auto it = many.find(c);
-    if (it == many.end())
-        return 0;
-    return (*it).second;
+Node* root(Node* current) {
+    if (current -> root == NIL)
+        return current;
+    return root(current -> root);
 }
 
-void turn(int nod, int oldc, int newc, bool to_add = false) {
-    //cerr << "turn in " << nod << " " << oldc << " in " << newc << "\n";
-    int x = get(many[nod], oldc);
-    if (!x)
-        return;
-    if (to_add)
-        answer += x;
-    //cerr << "now ->\n";
-    //for (auto & p : many[nod])
-    //    cerr << p.first << " " << p.second << "\n";
-
-    //cerr << "from ->\n";
-    //for (auto & p : from[nod])
-    //    cerr << p.second << " " << p.first << "\n";
-
-    //if (zero[nod])
-     //   cerr << 0 << " " << zero[nod] << "\n";
-
-   //cerr << "working\n";
-    many[nod][newc] += x;
-    many[nod].erase(oldc);
-    if (oldc == 0 || zero[nod] == oldc)
-        zero[nod] = newc;
-    if (oldc) {
-        if (get(from[nod], oldc)) {
-            from[nod][newc] = from[nod][oldc];
-            from[nod].erase(oldc);
-        } else
-            from[nod][newc] = oldc;
-    }
-
-    //cerr << "now ->\n";
-    /*for (auto & p : many[nod])
-        cerr << p.first << " " << p.second << "\n";
-
-    cerr << "from ->\n";
-    for (auto & p : from[nod])
-        cerr << p.second << " " << p.first << "\n";
-
-    if (zero[nod])
-        cerr << 0 << " " << zero[nod] << "\n";
-
-    cerr << "\n\n";*/
+void update(Node *current) {
+    current -> count = current -> left -> count + current -> right -> count + 1;
 }
 
-void lazy_update(int nod) {
-    //cerr << "lazy in " << nod << "\n";
-    if (!from[nod].size() && !zero[nod])
-        return;
+pair<Node*, Node*> split(Node *current, int value) {
+    if (current == NIL)
+        return {NIL, NIL};
+    if (value <= current -> value) {
+        auto left = split(current -> left, value);
+        left.first -> root = NIL;
 
-    for (auto &how : from[nod]) {
-        int tmp_oldc = how.second;
-        int tmp_newc = how.first;
-        turn(nod * 2, tmp_oldc, tmp_newc);
-        turn(nod * 2 + 1, tmp_oldc, tmp_newc);
-        //cerr << tmp_oldc << " -> " << tmp_newc << "\n";
+        if (left.second != NIL)
+            left.second -> root = current;
+        current -> left = left.second;
+
+        update(current);
+        return {left.first, current};
     }
 
-    from[nod].clear();
-    if (zero[nod]) {
-        turn(nod * 2, 0, zero[nod]);
-        turn(nod * 2 + 1, 0, zero[nod]);
-        //cerr << 0 << " -> " << zero[nod] << "\n";
-        zero[nod] = 0;
-    }
+    auto right = split(current -> right, value);
+    if (right.first != NIL)
+        right.first -> root = current;
+    right.second -> root = NIL;
+
+    current -> right = right.first;
+    update(current);
+
+    return {current, right.second};
 }
 
-void update(int nod, int left, int right, int start, int finish, int oldc, int newc) {
-    if (start <= left && right <= finish) {
-        turn(nod, oldc, newc, true);
-        return;
+Node* insert(Node *current, Node* element) {
+    if (element -> priority > current -> priority) {
+        auto sons = split(current, element -> value);
+        element -> left = sons.first;
+        element -> right = sons.second;
+        if (sons.first != NIL)
+            element -> left -> root = element;
+        if (sons.second != NIL)
+            element -> right -> root = element;
+        update(element);
+        return element;
     }
 
-    lazy_update(nod);  // we just send to childs
-    int mid = (left + right) / 2;
-    if (start <= mid)
-        update(nod * 2, left, mid, start, finish, oldc, newc);
-    if (mid < finish)
-        update(nod * 2 + 1, mid + 1, right, start, finish, oldc, newc);
+    if (element -> value < current -> value) {
+        current -> left = insert(current -> left, element);
+        current -> left -> root = current;
+        update(current);
+        return current;
+    }
 
-    many[nod][oldc] = get(many[nod * 2], oldc) + get(many[nod * 2 + 1], oldc);
-    many[nod][newc] = get(many[nod * 2], newc) + get(many[nod * 2 + 1], newc);
-
-    auto it = many[nod].find(oldc);
-    if ((*it).second == 0)
-        many[nod].erase(it);
-    it = many[nod].find(newc);
-    if ((*it).second == 0)
-        many[nod].erase(it);
-    //cerr << "-----------------------------------------------------------------------------\n";
-    //cerr << nod << " -> " << " In the interval " << left << " " << right << " we have " << get(many[nod], oldc) << " of " << oldc << " and " << get(many[nod], newc) << " of " << newc << "\n";
-    //cerr << "-----------------------------------------------------------------------------\n";
+    current -> right = insert(current -> right, element);
+    current -> right -> root = current;
+    update(current);
+    return current;
 }
 
-int query(int nod, int left, int right, int where) {
-    if (left == right) {
-        return (*many[nod].begin()).first;
+Node* merge(Node *left, Node *right) {
+    if (left == NIL and right == NIL)
+        return NIL;
+
+    if (left -> priority > right -> priority) {
+        left -> right = merge(left -> right, right);
+        if (left -> right != NIL)
+            left -> right -> root = left;
+        update(left);
+        return left;
     }
 
-    lazy_update(nod);
-    int mid = (left + right) / 2;
-    if (where <= mid)
-        return query(nod * 2, left, mid, where);
-    else
-        return query(nod * 2 + 1, mid + 1, right, where);
+    right -> left = merge(left, right -> left);
+    if (right -> left != NIL)
+        right -> left -> root = right;
+    update(right);
+    return right;
 }
 
 int main() {
     ifstream cin("input.txt");
     ofstream cout("output.txt");
 
-    int N, Q; cin >> N >> Q;
+    int N, M; cin >> N >> M;
 
-    build(1, 1, N);
+    srand(time(NULL));
+    NIL = new Node(0, -1);
+    NIL -> left = NIL -> right = NIL -> root = NIL;
+    NIL -> count = 0;
 
-    for (int i = 1; i <= Q; ++i) {
-        //cerr << "\n\n\n\n\n\n";
-        int x, y; cin >> x >> y;
+    vector<Node*> T(N + 1);
+    for (int i = 1; i <= N; ++i)
+        T[i] = new Node(i, rand());
 
-        int this_colour = query(1, 1, N, x);
-        if (this_colour)
-            update(1, 1, N, x, y, this_colour, i);
+    FenwickTree F(N, 1);
+    long long answer = 0;
+    for (int i = 1; i <= M; ++i) {
+        int from, to; cin >> from >> to;
 
-        update(1, 1, N, x, y, 0, i);
+        Node* now, *left, *right;
+        now = root(T[from]);
+        tie(left, now) = split(now, from);
+        tie(now, right) = split(now, to + 1);
 
-        //cerr << " aiiiiiiiici " << answer << "\n";
+        merge(left, right);
+        if (F.query(now -> value) - F.query(now -> value - 1)) {
+            F.update(now -> value, -1);
+        }
+
+        // find those with 1
+        int before = F.query(from - 1);
+        do {
+            int next = F.find(before) + 1;
+            if (next > to)
+                break;
+            now = insert(now, T[next]);
+            F.update(next, -1);
+        } while (true);
+        answer += now -> count;
     }
 
     cout << answer << "\n";
