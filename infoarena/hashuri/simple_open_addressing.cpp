@@ -294,6 +294,7 @@ int main() {
     for (HashSet<int>::iterator it = H.begin(); it != H.end(); ++it)
         cout << *it << " ";
 
+    int N; cin >> N;
     for (int i = 0; i < N; ++i) {
         int type, value;
         cin >> type>> value;

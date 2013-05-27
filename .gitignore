@@ -2,6 +2,7 @@
 !*.cpp
 !*.py
 !*/
+!*.rb
 *.in
 *.out
 *.txt
