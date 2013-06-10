@@ -4,6 +4,7 @@
 !*.cpp
 !*.py
 !*.rb
+!Makefile
 *.in
 *.out
 *.txt
