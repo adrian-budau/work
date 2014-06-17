@@ -12,3 +12,4 @@
 !.gitignore
 !README.md
 *.dSYM
+*.gitignore
