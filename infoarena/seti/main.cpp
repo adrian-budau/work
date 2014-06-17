@@ -127,7 +127,7 @@ int main() {
         string C; cin >> C;
         S += C;
     }
-   
+
     SuffixAutomaton T(S);
 
     T.prepare();
