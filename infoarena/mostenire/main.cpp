@@ -86,7 +86,7 @@ int main() {
             return false;
 
         int64_t T = K - sum * S;
-        int64_t canLowest = V.front() * firstBigger;
+        int64_t canLowest = 1LL * V.front() * firstBigger;
         // Rewrite: canLowest * D > T
         // canLowest > T / D
         if (canLowest > T / D)
@@ -104,7 +104,7 @@ int main() {
         int64_t part = (S + D) * V.front() + D;
         if (part > (T + B) / (N - firstBigger))
             return false;
-        int canHighest = part * (N - firstBigger) - B;
+        int64_t canHighest = part * (N - firstBigger) - B;
         if (canLowest + canHighest < T)
             return true;
         return false;
