@@ -44,7 +44,7 @@ void dfs(int node) {
 }
 
 int main() {
-    ifstream cin("nowherezero.in");
+    ifstream cin("nowhere-zero.in");
 
     int N, M; cin >> N >> M;
 

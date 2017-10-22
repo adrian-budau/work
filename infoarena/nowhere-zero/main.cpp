@@ -14,14 +14,18 @@ class Edge {
     int from, to, index;
 };
 
+typedef long double double64;
+static const double64 eps = 1e-14;
+int x = 1'000'000'000;
+
 int main() {
-    ifstream cin("nowherezero.in");
-    ofstream cout("nowherezero.out");
+    ifstream cin("nowhere-zero.in");
+    ofstream cout("nowhere-zero.out");
 
     int N, M;
     cin >> N >> M;
 
-    vector<double> X(N), Y(N);
+    vector<double64> X(N), Y(N);
     for (int i = 0; i < N; ++i)
         cin >> X[i] >> Y[i];
 
@@ -47,6 +51,11 @@ int main() {
             int b = y.to;
             return atan2(Y[a] - Y[i], X[a] - X[i]) < atan2(Y[b] - Y[i], X[b] - X[i]);
         });
+        for (int j = 1; j < int(E[i].size()); ++j) {
+            int prev = E[i][j - 1].to;
+            int now = E[i][j].to;
+            assert(atan2(Y[prev] - Y[i], X[prev] - X[i]) - atan2(Y[now] - Y[i], X[now] - X[i]) < -eps);
+        }
 
         for (int j = 0; j < int(E[i].size()); ++j) {
             // we set for each edge on what position do we find it in a list
@@ -70,27 +79,39 @@ int main() {
                 int start = i; // when we reach start its a face
                 int node = i;  // where we are now
                 int which = j; // which edge are we won
+                int start_which = which;
                 int next = E[node][which].to;
 
+                if (start == 8655 && which == 14)
+                    start = 8655;
+                int visited = 0;
                 if (node < next and used_times[E[node][which].index] & 1) // we've used this orientation
-                    continue;
+                    visited |= 1;
                 if (next < node and used_times[E[node][which].index] & 2) // or this orientation
+                    visited |= 2;
+                assert(visited != 3);
+                if (visited > 0)
                     continue;
+
                 do {
                     orientation[E[node][which].index].push_back({E[node][which].from, E[node][which].to});
                     faces[E[node][which].index].push_back(faces_number);                        // this is one of the faces of this edge
 
                     int next_node = E[node][which].to;                                          // next node
-                    if (node < next_node)                                                       // we have one less trip through this edge
+                    if (node < next_node) {                                                     // we have one less trip through this edge
+                        assert((used_times[E[node][which].index] & 1) == 0);
                         used_times[E[node][which].index] |= 1;
-                    else
-                        used_times[E[node][which].index] |= 2;      
+                    } else {
+                        assert((used_times[E[node][which].index] & 2) == 0);
+                        used_times[E[node][which].index] |= 2;
+                    }
                     int next_which = where(E[node][which], next_node)[E[node][which].index];    // next location of this edge
                     next_which = (next_which + 1) % E[next_node].size();                        // we go to the right
 
                     node = next_node;
                     which = next_which;
                 } while (node != start); // until we get to the start
+                assert(which == start_which);
                 faces_number++; // we found one more face
             }
 
@@ -139,7 +160,7 @@ int main() {
     vector<int> colors(faces_number, 0);
 
     for (auto &face : order) {
-        array<int, 7> used({0, 0, 0, 0, 0, 0, 0}); // what colors our neighbours have
+        array<int, 7> used = {{0, 0, 0, 0, 0, 0, 0}}; // what colors our neighbours have
         for (auto &neighbour : face_edges[face])
             used[colors[neighbour]] = 1;
         for (int i = 1; i <= 6; ++i)
