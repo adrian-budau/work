@@ -1,0 +1,11 @@
+[package]
+name = "bricks"
+version = "0.1.0"
+authors = ["Adrian Budau <budau.adi@gmail.com>"]
+
+[dependencies]
+input-stream = "*"
+
+[[bin]]
+path = "main.rs"
+name = "main"
