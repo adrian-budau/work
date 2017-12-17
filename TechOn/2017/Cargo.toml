@@ -1,0 +1,10 @@
+[package]
+name = "challenge-amazon-techon"
+version = "0.2017.0"
+authors = ["Adrian Budau <budau.adi@gmail.com>"]
+
+[dependencies]
+input-stream = "0.2.0"
+itertools = "0.7.3"
+bit-vec = "0.4.4"
+rand = "0.3"
